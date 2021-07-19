@@ -13,39 +13,75 @@
  * 
  * Иногда промисы от API будут приходить в состояние rejected, (прямо как и API в реальной жизни)
  * Ответ будет приходить в поле {result}
- */
- import Api from '../tools/api';
+*/
+import Api from '../tools/api';
+import {
+    pipe,
+    tap,
+    allPass,
+    length,
+    gt,
+    lt,
+    test,
+    ifElse,
+    not,
+    mathMod
+} from 'ramda';
 
- const api = new Api();
+const api = new Api();
+
+const greaterThanTwo = value => gt(length(String(value)), 2);
+const lessThanTen = value => lt(length(String(value)), 10);
+const moreThanZero = value => gt(value, 0);
+const isNumber = value => test(/^\d+\.?\d+$/, value);
+
+const validate = allPass([
+    greaterThanTwo,
+    lessThanTen,
+    moreThanZero,
+    isNumber
+]);
  
- /**
-  * Я – пример, удали меня
-  */
- const wait = time => new Promise(resolve => {
-     setTimeout(resolve, time);
- })
+const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
+    pipe(
+        // 1. Берем строку N. Пишем изначальную строку в writeLog.
+        tap(writeLog),
+        ifElse(
+            // 2. Строка валидируется по следующим правилам
+            not(validate), 
+            // В случае ошибки валидации вызвать handleError с 'ValidationError' строкой в качестве аргумента
+            handleError('validationError'), 
+            pipe(
+                // 3. Привести строку к числу, округлить к ближайшему целому с точностью до единицы, записать в writeLog.
+                Number,
+                Math.round,
+                tap(writeLog),
+
+                // 4. C помощью API /numbers/base перевести из 10-й системы счисления в двоичную, результат записать в writeLog
+                // асинхронный запрос к апи
+                tap(writeLog),
+
+                // 5. Взять кол-во символов в полученном от API числе записать в writeLog
+                String,
+                length,
+                tap(writeLog),
+
+                // 6. Возвести в квадрат с помощью Javascript записать в writeLog
+                Math.pow,
+                tap(writeLog),
+
+                // 7. Взять остаток от деления на 3, записать в writeLog
+                mathMod,
+                tap(writeLog),
+
+                // 8. C помощью API /animals.tech/id/name получить случайное животное используя полученный остаток в качестве id
+                // асинхронный запрос к апи
+
+                // 9. Завершить цепочку вызовом handleSuccess в который в качестве аргумента положить результат полученный на предыдущем шаге
+                handleSuccess()
+            )
+        )
+    )(value);
+}
  
- const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
-     /**
-      * Я – пример, удали меня
-      */
-     writeLog(value);
- 
-     api.get('https://api.tech/numbers/base', {from: 2, to: 10, number: '01011010101'}).then(({result}) => {
-         writeLog(result);
-     });
- 
-     wait(2500).then(() => {
-         writeLog('SecondLog')
- 
-         return wait(1500);
-     }).then(() => {
-         writeLog('ThirdLog');
- 
-         return wait(400);
-     }).then(() => {
-         handleSuccess('Done');
-     });
- }
- 
- export default processSequence;
+export default processSequence;

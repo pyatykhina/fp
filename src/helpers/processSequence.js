@@ -25,7 +25,11 @@ import {
     test,
     ifElse,
     not,
-    mathMod
+    mathMod,
+    andThen,
+    prop,
+    otherwise,
+    curry
 } from 'ramda';
 
 const api = new Api();
@@ -41,6 +45,9 @@ const validate = allPass([
     moreThanZero,
     isNumber
 ]);
+
+const convertToBinary = value => api.get('https://api.tech/numbers/base')({from: 10, to: 2, number: value});
+const fetchAnimal = id => api.get(`https://animals.tech/${id}`);
  
 const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
     pipe(
@@ -48,9 +55,8 @@ const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
         tap(writeLog),
         ifElse(
             // 2. Строка валидируется по следующим правилам
-            not(validate), 
-            // В случае ошибки валидации вызвать handleError с 'ValidationError' строкой в качестве аргумента
-            handleError('validationError'), 
+            validate, 
+
             pipe(
                 // 3. Привести строку к числу, округлить к ближайшему целому с точностью до единицы, записать в writeLog.
                 Number,
@@ -58,28 +64,39 @@ const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
                 tap(writeLog),
 
                 // 4. C помощью API /numbers/base перевести из 10-й системы счисления в двоичную, результат записать в writeLog
-                // асинхронный запрос к апи
-                tap(writeLog),
+                convertToBinary,
+                andThen(
+                    prop('result'),
+                    tap(writeLog),
 
-                // 5. Взять кол-во символов в полученном от API числе записать в writeLog
-                String,
-                length,
-                tap(writeLog),
+                    // 5. Взять кол-во символов в полученном от API числе записать в writeLog
+                    String,
+                    length,
+                    tap(writeLog),
 
-                // 6. Возвести в квадрат с помощью Javascript записать в writeLog
-                Math.pow,
-                tap(writeLog),
+                    // 6. Возвести в квадрат с помощью Javascript записать в writeLog
+                    Math.pow,
+                    tap(writeLog),
 
-                // 7. Взять остаток от деления на 3, записать в writeLog
-                mathMod,
-                tap(writeLog),
+                    // 7. Взять остаток от деления на 3, записать в writeLog
+                    mathMod,
+                    tap(writeLog),
 
-                // 8. C помощью API /animals.tech/id/name получить случайное животное используя полученный остаток в качестве id
-                // асинхронный запрос к апи
+                    // 8. C помощью API /animals.tech/id/name получить случайное животное используя полученный остаток в качестве id
+                    fetchAnimal,
+                    andThen(
+                        prop('result'),
 
-                // 9. Завершить цепочку вызовом handleSuccess в который в качестве аргумента положить результат полученный на предыдущем шаге
-                handleSuccess()
-            )
+                        // 9. Завершить цепочку вызовом handleSuccess в который в качестве аргумента положить результат полученный на предыдущем шаге
+                        handleSuccess
+                    ),
+                    otherwise(handleError)
+                ),
+                otherwise(handleError)
+            ),
+
+            // В случае ошибки валидации вызвать handleError с 'ValidationError' строкой в качестве аргумента
+            () => handleError('validationError')
         )
     )(value);
 }

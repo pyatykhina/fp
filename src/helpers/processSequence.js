@@ -24,12 +24,11 @@ import {
     lt,
     test,
     ifElse,
-    not,
     mathMod,
     andThen,
     prop,
     otherwise,
-    curry
+    __
 } from 'ramda';
 
 const api = new Api();
@@ -64,35 +63,39 @@ const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
                 tap(writeLog),
 
                 // 4. C помощью API /numbers/base перевести из 10-й системы счисления в двоичную, результат записать в writeLog
-                convertToBinary,
-                andThen(
-                    prop('result'),
-                    tap(writeLog),
-
-                    // 5. Взять кол-во символов в полученном от API числе записать в writeLog
-                    String,
-                    length,
-                    tap(writeLog),
-
-                    // 6. Возвести в квадрат с помощью Javascript записать в writeLog
-                    Math.pow,
-                    tap(writeLog),
-
-                    // 7. Взять остаток от деления на 3, записать в writeLog
-                    mathMod,
-                    tap(writeLog),
-
-                    // 8. C помощью API /animals.tech/id/name получить случайное животное используя полученный остаток в качестве id
-                    fetchAnimal,
-                    andThen(
+                tap(convertToBinary),
+                andThen( 
+                    pipe(
                         prop('result'),
+                        tap(writeLog),
 
-                        // 9. Завершить цепочку вызовом handleSuccess в который в качестве аргумента положить результат полученный на предыдущем шаге
-                        handleSuccess
-                    ),
-                    otherwise(handleError)
+                        // 5. Взять кол-во символов в полученном от API числе записать в writeLog
+                        String,
+                        length,
+                        tap(writeLog),
+
+                        // 6. Возвести в квадрат с помощью Javascript записать в writeLog
+                        Math.pow,
+                        tap(writeLog),
+
+                        // 7. Взять остаток от деления на 3, записать в writeLog
+                        mathMod(__, 3),
+                        tap(writeLog),
+
+                        // 8. C помощью API /animals.tech/id/name получить случайное животное используя полученный остаток в качестве id
+                        tap(fetchAnimal),
+                        andThen(
+                            pipe(
+                                prop('result'),
+
+                                // 9. Завершить цепочку вызовом handleSuccess в который в качестве аргумента положить результат полученный на предыдущем шаге
+                                tap(handleSuccess)
+                            )
+                        ),
+                        otherwise(tap(handleError))
+                    )
                 ),
-                otherwise(handleError)
+                otherwise(tap(handleError))
             ),
 
             // В случае ошибки валидации вызвать handleError с 'ValidationError' строкой в качестве аргумента

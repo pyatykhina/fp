@@ -46,7 +46,9 @@ const validate = allPass([
 ]);
 
 const convertToBinary = value => api.get('https://api.tech/numbers/base')({from: 10, to: 2, number: value});
-const fetchAnimal = id => api.get(`https://animals.tech/${id}`);
+const fetchAnimal = id => api.get(`https://animals.tech/${id}`)({});
+
+const pow = value => Math.pow(value, 2);
  
 const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
     pipe(
@@ -63,7 +65,7 @@ const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
                 tap(writeLog),
 
                 // 4. C помощью API /numbers/base перевести из 10-й системы счисления в двоичную, результат записать в writeLog
-                tap(convertToBinary),
+                convertToBinary,
                 andThen( 
                     pipe(
                         prop('result'),
@@ -75,7 +77,7 @@ const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
                         tap(writeLog),
 
                         // 6. Возвести в квадрат с помощью Javascript записать в writeLog
-                        Math.pow,
+                        pow,
                         tap(writeLog),
 
                         // 7. Взять остаток от деления на 3, записать в writeLog
@@ -83,7 +85,7 @@ const processSequence = ({value, writeLog, handleSuccess, handleError}) => {
                         tap(writeLog),
 
                         // 8. C помощью API /animals.tech/id/name получить случайное животное используя полученный остаток в качестве id
-                        tap(fetchAnimal),
+                        fetchAnimal,
                         andThen(
                             pipe(
                                 prop('result'),
